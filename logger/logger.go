@@ -45,7 +45,8 @@ func (w *byteSliceWriter) Write(p []byte) (n int, err error) {
 type defaultLogger struct {
 	w      io.Writer
 	prefix string
-	buf    []byte
+
+	buf []byte
 }
 
 func (l *defaultLogger) Noticef(format string, v ...any) {
