@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sync"
@@ -12,7 +13,7 @@ const (
 )
 
 type Logger interface {
-	Notice(msg string)
+	Noticef(format string, v ...any)
 }
 
 var (
@@ -23,7 +24,7 @@ var (
 func Noticef(format string, v ...any) {
 	loggerLock.Lock()
 	defer loggerLock.Unlock()
-	logger.Notice(fmt.Sprintf(format, v...))
+	logger.Noticef(format, v...)
 }
 
 func SetLogger(l Logger) {
@@ -36,22 +37,32 @@ type defaultLogger struct {
 	w      io.Writer
 	prefix string
 
-	buf []byte
+	pool sync.Pool
 }
 
-func (l *defaultLogger) Notice(msg string) {
-	l.buf = l.buf[:0]
+func (l *defaultLogger) Noticef(format string, v ...any) {
+	buf := l.pool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer l.pool.Put(buf)
 	now := time.Now().UTC()
-	l.buf = now.AppendFormat(l.buf, timestampFormat)
-	l.buf = append(l.buf, ' ')
-	l.buf = append(l.buf, l.prefix...)
-	l.buf = append(l.buf, msg...)
-	if len(msg) == 0 || msg[len(msg)-1] != '\n' {
-		l.buf = append(l.buf, '\n')
+	buf.WriteString(now.Format(timestampFormat))
+	buf.WriteByte(' ')
+	buf.WriteString(l.prefix)
+	fmt.Fprintf(buf, format, v...)
+	if buf.Len() == 0 || buf.Bytes()[buf.Len()-1] != '\n' {
+		buf.WriteByte('\n')
 	}
-	l.w.Write(l.buf)
+	l.w.Write(buf.Bytes())
 }
 
 func New(w io.Writer, prefix string) Logger {
-	return &defaultLogger{w: w, prefix: prefix}
+	return &defaultLogger{
+		w:      w,
+		prefix: prefix,
+		pool: sync.Pool{
+			New: func() any {
+				return &bytes.Buffer{}
+			},
+		},
+	}
 }
