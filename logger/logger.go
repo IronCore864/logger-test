@@ -32,16 +32,6 @@ func SetLogger(l Logger) {
 	loggerLock.Unlock()
 }
 
-// byteSliceWriter wraps a byte slice to implement io.Writer
-type byteSliceWriter struct {
-	buf *[]byte
-}
-
-func (w *byteSliceWriter) Write(p []byte) (n int, err error) {
-	*w.buf = append(*w.buf, p...)
-	return len(p), nil
-}
-
 type defaultLogger struct {
 	w      io.Writer
 	prefix string
@@ -55,8 +45,7 @@ func (l *defaultLogger) Noticef(format string, v ...any) {
 	l.buf = now.AppendFormat(l.buf, timestampFormat)
 	l.buf = append(l.buf, ' ')
 	l.buf = append(l.buf, l.prefix...)
-	writer := &byteSliceWriter{buf: &l.buf}
-	fmt.Fprintf(writer, format, v...)
+	l.buf = fmt.Appendf(l.buf, format, v...)
 	if len(l.buf) == 0 || l.buf[len(l.buf)-1] != '\n' {
 		l.buf = append(l.buf, '\n')
 	}
