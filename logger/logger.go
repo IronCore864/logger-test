@@ -12,7 +12,7 @@ const (
 )
 
 type Logger interface {
-	Notice(msg string)
+	Noticef(format string, v ...any)
 }
 
 var (
@@ -23,7 +23,7 @@ var (
 func Noticef(format string, v ...any) {
 	loggerLock.Lock()
 	defer loggerLock.Unlock()
-	logger.Notice(fmt.Sprintf(format, v...))
+	logger.Noticef(format, v...)
 }
 
 func SetLogger(l Logger) {
@@ -39,19 +39,23 @@ type defaultLogger struct {
 	buf []byte
 }
 
-func (l *defaultLogger) Notice(msg string) {
+func (l *defaultLogger) Noticef(format string, v ...any) {
 	l.buf = l.buf[:0]
 	now := time.Now().UTC()
 	l.buf = now.AppendFormat(l.buf, timestampFormat)
 	l.buf = append(l.buf, ' ')
 	l.buf = append(l.buf, l.prefix...)
-	l.buf = append(l.buf, msg...)
-	if len(msg) == 0 || msg[len(msg)-1] != '\n' {
+	l.buf = fmt.Appendf(l.buf, format, v...)
+	if len(l.buf) == 0 || l.buf[len(l.buf)-1] != '\n' {
 		l.buf = append(l.buf, '\n')
 	}
 	l.w.Write(l.buf)
 }
 
 func New(w io.Writer, prefix string) Logger {
-	return &defaultLogger{w: w, prefix: prefix}
+	return &defaultLogger{
+		w:      w,
+		prefix: prefix,
+		buf:    make([]byte, 0, 256), // Preallocate some reasonable capacity.
+	}
 }

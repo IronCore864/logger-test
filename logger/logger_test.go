@@ -11,8 +11,7 @@ func BenchmarkLoggerNoticef(b *testing.B) {
 	logger := New(io.Discard, "Benchmark: ")
 	SetLogger(logger)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		Noticef("Formatted message with number: %d and string: %s", 42, "test")
 	}
 }
