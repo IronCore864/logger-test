@@ -35,6 +35,7 @@ func BenchmarkLoggerNoticefStderr(b *testing.B) {
 	logger := New(os.Stderr, "Benchmark: ")
 	SetLogger(logger)
 
+	b.ResetTimer()
 	for b.Loop() {
 		Noticef("Formatted message with number: %d and string: %s", 42, "test")
 	}
